@@ -1,1 +1,29 @@
-/docs
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test artifacts
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace file
+go.work
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Scratch and temporary directories
+tmp/
+scratch/
