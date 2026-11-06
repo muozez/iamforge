@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  test:
+    name: Test & Vet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          check-latest: true
+
+      - name: Verify Go dependencies
+        run: go mod verify
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Run tests (CGO_ENABLED=0)
+        env:
+          CGO_ENABLED: 0
+        run: go test -v ./...
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          check-latest: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+  build-matrix:
+    name: Build Matrix (CGO_ENABLED=0)
+    runs-on: ubuntu-latest
+    needs: [test]
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          check-latest: true
+
+      - name: Build binary
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          OUT="bin/iamforge-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            OUT="${OUT}.exe"
+          fi
+          go build -ldflags "-s -w -X github.com/muozez/iamforge/internal/cli.Version=ci -X github.com/muozez/iamforge/internal/cli.Commit=${{ github.sha }} -X github.com/muozez/iamforge/internal/cli.Date=$(date -u +%Y-%m-%d)" -o "${OUT}" ./cmd/iamforge
+
